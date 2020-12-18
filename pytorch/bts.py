@@ -218,8 +218,9 @@ class bts(nn.Module):
         daspp_24 = self.daspp_24(concat4_5)
         concat4_daspp = torch.cat([iconv4, daspp_3, daspp_6, daspp_12, daspp_18, daspp_24], dim=1)
         daspp_feat = self.daspp_conv(concat4_daspp)
-        
-        reduc8x8 = self.reduc8x8(daspp_feat)
+        unify_out = torch.nn.functional.adaptive_avg_pool2d(daspp_feat,(22,34))
+
+        reduc8x8 = self.reduc8x8(torch_nn_func.interpolate(unify_out,size=(daspp_feat.size(2),daspp_feat.size(3))))
         plane_normal_8x8 = reduc8x8[:, :3, :, :]
         plane_normal_8x8 = torch_nn_func.normalize(plane_normal_8x8, 2, 1)
         plane_dist_8x8 = reduc8x8[:, 3, :, :]
@@ -228,7 +229,7 @@ class bts(nn.Module):
         depth_8x8_scaled = depth_8x8.unsqueeze(1) / self.params.max_depth
         depth_8x8_scaled_ds = torch_nn_func.interpolate(depth_8x8_scaled, scale_factor=0.25, mode='nearest')
         
-        upconv3 = self.upconv3(daspp_feat) # H/4
+        upconv3 = self.upconv3(torch_nn_func.interpolate(unify_out,size=(daspp_feat.size(2),daspp_feat.size(3)))) # H/4
         upconv3 = self.bn3(upconv3)
         concat3 = torch.cat([upconv3, skip1, depth_8x8_scaled_ds], dim=1)
         iconv3 = self.conv3(concat3)
